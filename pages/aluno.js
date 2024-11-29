@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -12,18 +12,47 @@ import {
     KeyboardAvoidingView,
     Keyboard,
     TouchableWithoutFeedback,
-    Pressable
+    Pressable,
+    ActivityIndicator,
+    FlatList
 } from 'react-native';
 
+import { supabase } from '../supabase';
+import Post from '../components/post';
 
 
-// Defina algumas telas exemplo para as suas tabs
+
 function HomeScreen() {
     const [filtroAtivo, setFiltroAtivo] = useState('Geral');
+    const [posts, setPosts] = useState([]);
 
     const handleFiltroPress = (filtro) => {
         setFiltroAtivo(filtro);
     };
+
+    const fetchPosts = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('post') // Nome da tabela
+                .select('*'); // Busca todas as colunas
+
+            if (error) {
+                console.error('Erro ao buscar dados:', error.message);
+                return;
+            }
+
+            setPosts(data); // Atualiza o estado "posts" com os dados retornados
+        } catch (err) {
+            console.error('Erro inesperado:', err);
+        }
+    };
+
+    // useEffect para buscar os dados ao montar o componente
+    useEffect(() => {
+        fetchPosts(); // Chama a função para buscar os dados
+    }, []);
+
+
     return (
         <View style={{ flex: 1, alignItems: 'center', backgroundColor: '#fff' }}>
 
@@ -63,7 +92,36 @@ function HomeScreen() {
                 <View style={index.linha2}></View>
             </View>
 
-            <View style={index.main}></View>
+            <View style={index.main}>
+
+                <FlatList
+                    data={posts}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={({ item }) => (
+                        <>
+                            <Post
+                                texto={item.texto}
+                                imagens={item.imagens}
+                                imagem={item.imagem}
+                                tipo={item.tipo}
+                                opcoes={item.opcoes}
+                            />
+                            <View style={{
+                                width: '95%',
+                                height: 2,
+                                backgroundColor: '#ff0000',
+                                opacity: 0.18,
+                                alignSelf: 'center', // Centraliza a linha divisória
+                                marginVertical: 25, // Espaçamento vertical entre posts
+                            }} />
+                        </>
+                    )}
+                    style={{
+                        width: '100%', marginTop: 20
+                    }}
+                />
+
+            </View>
 
         </View>
 
@@ -72,18 +130,19 @@ function HomeScreen() {
 
 function SettingsScreen() {
 
-    const [isToggled, setIsToggled] = useState(false);
-
     const toggleSwitch = () => {
         setIsToggled(prev => !prev);
     };
+
+
+
     return (
         <View style={{ flex: 0.9, justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
 
             <View style={config.perfil}>
 
                 <Image style={config.imagemAluno} source={require('../assets/img/alunoFt.png')}></Image>
-                <Text style={config.nomeAluno}>Nome do aluno</Text>
+                <Text style={config.nomeAluno}> {userData.nome} </Text>
             </View>
 
             <View style={config.contato}>
@@ -96,7 +155,7 @@ function SettingsScreen() {
                             <Ionicons name={'call'} size={24} color={'#000'} />
                             <Text style={config.desc}> Telefone </Text>
                         </View>
-                        <Text style={config.assunto}> (+55) 11 12345-6789 </Text>
+                        <Text style={config.assunto}> {userData.telefone} </Text>
                     </View>
 
                     <View style={config.box}>
@@ -104,7 +163,7 @@ function SettingsScreen() {
                             <Ionicons name={'mail'} size={24} color={'#000'} />
                             <Text style={config.desc}> Email </Text>
                         </View>
-                        <Text style={config.assunto}> nome.sobrenome@portalsesisp.org.br </Text>
+                        <Text style={config.assunto}> {userData.email} </Text>
                     </View>
                 </View>
 
@@ -137,13 +196,14 @@ function SettingsScreen() {
                     </View>
                 </View>
             </View>
-        </View >
+        </View>
     );
 }
 
 const Tab = createBottomTabNavigator();
 
 export default function Acesso() {
+
     return (
         <Tab.Navigator
             screenOptions={({ route }) => ({
@@ -284,5 +344,9 @@ const index = StyleSheet.create({
     },
     main: {
         flex: 4,
+        width:' 100%',
+        alignItems:' center',
+        justifyContent: 'center',
+        marginTop: -45
     },
 });

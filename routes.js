@@ -1,6 +1,6 @@
 import { createStackNavigator } from '@react-navigation/stack';
 import login from './pages/login';
-import index from './pages/aluno';
+import aluno from './pages/aluno';
 import senha from './pages/senha';
 import nutri from './pages/nutri';
 import pais from './pages/pais';
@@ -19,8 +19,8 @@ export default function Routes() {
                 options={{ headerShown: false }}
             />
             <Stack.Screen
-                name="index"
-                component={index}
+                name="aluno"
+                component={aluno}
                 options={{ headerShown: false }}
             />
             <Stack.Screen

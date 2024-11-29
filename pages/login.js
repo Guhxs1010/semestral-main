@@ -1,4 +1,3 @@
-import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import {
@@ -15,115 +14,117 @@ import {
     Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from '../supabase'
+import React, { useState, useEffect } from "react";
+
+import { supabase } from '../supabase';
 
 
 export default function Bem_Vindo() {
 
     const navigation = useNavigation();
 
-    // Novo estado para controlar a tela de carregamento
-    const [loading, setLoading] = useState(true);
     const [isChecked, setIsChecked] = useState(false);
-    const [login, setLogin] = useState('');
+    const [login, setLogin] = useState();
     const [senha, setSenha] = useState('');
-    const [identifier, setIdentifier] = useState(""); //cpf
-  const [password, setPassword] = useState("");
-
-    // useEffect para simular a tela de carregamento
-    useEffect(() => {
-        // Esconde a tela de carregamento após 2 segundos
-        const timer = setTimeout(() => {
-            setLoading(false);
-        }, 2000);
-
-        // Limpa o timer quando o componente desmontar
-        return () => clearTimeout(timer);
-    }, []);
 
     const toggleCheck = () => {
         setIsChecked(prevState => !prevState);
     };
 
-
     const handleLogin = async (cpf, password) => {
-        const email = await buscarEmailPorCpf(cpf); // Busca o email pelo CPF
-    
-        if (email) {
-          const sucesso = await realizarLogin(email, password); // Realiza o login
-          if (sucesso) {
-            console.log('Usuário logado com sucesso!');
-          } else {
-            console.log('Falha no login.');
-          }
+        const info = await buscarEmailPorCpfOuRm(cpf); // Busca o email pelo CPF
+
+        if (info) {
+
+            const a = info[0]?.email;
+            const categoria = info[0]?.categoria;
+            const id = info[0]?.id;
+            console.log("teste a : " +a)
+
+            const sucesso = await realizarLogin(a, password); // Realiza o login
+            if (sucesso) {
+                
+                console.log('Usuário logado com sucesso!');
+
+                navigation.navigate('senha', {
+                    usuario: categoria,
+                    id: id
+                });
+            } else {
+                console.log('Falha no login.');
+            }
         } else {
-          console.log('Não foi possível encontrar o email para o CPF informado.');
+            console.log('Não foi possível encontrar o email para o CPF informado.');
         }
-      };
-    
-      const buscarEmailPorCpf = async (cpf) => {
-        console.log(cpf);
-    
-        try {
-          const { data, error } = await supabase
-            .from('profiles')  // Nome da tabela
-            .select('email')   // Seleciona a coluna 'email'
-            .eq('cpf', cpf);   // Filtra pelo CPF
-    
-          if (error) {
-            console.error('Erro ao buscar o email:', error.message);
-            return null;
-          }
-    
-          // Verifica se encontrou algum resultado
-          if (data && data.length > 0) {
-            const email = data[0].email; // Obtém o email do primeiro resultado
-            console.log('Email encontrado:', email);
-            return email;
-          } else {
-            console.log('CPF não encontrado');
-            return null;
-          }
-        } catch (err) {
-          console.error('Erro desconhecido:', err);
-          return null;
-        }
-      };
-    
-    
-      const realizarLogin = async (email, password) => {
-        try {
-          const { error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-    
-          if (error) {
-            console.error('Erro ao realizar login:', error.message);
-            return false; // Indica falha no login
-          }
-    
-          console.log('Login realizado com sucesso!');
-          return true; // Indica sucesso no login
-        } catch (err) {
-          console.error('Erro desconhecido ao tentar logar:', err);
-          return false;
-        }
-      };
+    };
 
-    // Se ainda estiver carregando, exibe a tela de carregamento
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <Image
-                    style={styles.loadingImage}
-                    source={require('../assets/img/logo-branca.png')} // Substitua pelo caminho da imagem que deseja usar
-                />
-            </View>
-        );
-    }
+    const buscarEmailPorCpfOuRm = async (identificador) => {""
+        console.log("Identificador recebido:", identificador);
 
-    // Conteúdo principal
+        try {
+            let query; // Variável para armazenar a consulta
+            if (identificador.length === 4) {
+                console.log("Procurando pelo RM");
+                query = supabase
+                    .from('profiles') // Nome da tabela
+                    .select('email, categoria, id')  // Seleciona a coluna 'email'
+                    .eq('rm', identificador); // Filtra pelo RM
+            } else {
+                console.log("Procurando pelo CPF");
+                query = supabase
+                    .from('profiles') // Nome da tabela
+                    .select('email, categoria, id')  // Seleciona a coluna 'email'
+                    .eq('cpf', identificador); // Filtra pelo CPF
+            }
+
+            // Executa a consulta
+            const { data, error } = await query;
+
+            console.log(data)
+
+            if (error) {
+                console.error('Erro ao buscar o email:', error.message);
+                return null;
+            }
+
+            // Verifica se encontrou algum resultado
+            if (data && data.length > 0) {
+                return data;
+            } else {
+                console.log('Nenhum resultado encontrado');
+                return null;
+            }
+        } catch (err) {
+            console.error('Erro desconhecido:', err);
+            return null;
+        }
+    };
+
+    const realizarLogin = async (email, password) => {
+
+        console.log(email)
+
+        try {
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+
+            if (error) {
+                console.error('Erro ao realizar login:', error.message);
+                return false; // Indica falha no login
+            }
+
+            console.log('Login realizado com sucesso!');
+            return true; // Indica sucesso no login
+        } catch (err) {
+            console.error('Erro desconhecido ao tentar logar:', err);
+            return false;
+        }
+    };
+
+
+
     return (
         <KeyboardAvoidingView
             style={styles.container}
@@ -174,7 +175,7 @@ export default function Bem_Vindo() {
                         </View>
 
                         <View style={styles.botao}>
-                            <Pressable onPress={() => handleLogin(identifier, password)} style={styles.botaoEntrar}>
+                            <Pressable onPress={() => handleLogin(login, senha)} style={styles.botaoEntrar}>
                                 <Text style={styles.textoBotao}>Entrar</Text>
                             </Pressable>
                         </View>
@@ -191,21 +192,10 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff3838',
         justifyContent: 'flex-end',
     },
-    loadingContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: '#ff3838', // Cor de fundo durante o carregamento
-    },
-    loadingImage: {
-        width: 150,
-        height: 150,
-        resizeMode: 'contain',
-    },
     scrollViewContent: {
         flexGrow: 1,
         width: '100%',
-        justifyContent: 'flex-end',
+        justifyContent: 'flex-end',  // Para alinhar os elementos no final da tela
     },
     box: {
         paddingVertical: 20,

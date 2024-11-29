@@ -1,4 +1,4 @@
-import React, { useState, useLayoutEffect } from "react";
+import React, { useState, useLayoutEffect, useEffect } from "react";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
@@ -20,6 +20,7 @@ import {
   Modal,
   ScrollView
 } from "react-native";
+import { supabase } from "../supabase";
 
 import Adicionar from "../components/adicionar";
 import Contato from "../components/contato";
@@ -30,113 +31,142 @@ import Post from "../components/post";
 
 //paginas
 
+
 function HomeScreen() {
-  const [filtroAtivo, setFiltroAtivo] = useState("Geral");
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [posts, setPosts] = useState([]);
+    const [filtroAtivo, setFiltroAtivo] = useState("Geral");
+    const [isModalVisible, setModalVisible] = useState(false);
+    const [posts, setPosts] = useState([]);
+    const [postEditando, setPostEditando] = useState(null); // Post em edição
+  
+    const handleFiltroPress = (filtro) => {
+      setFiltroAtivo(filtro);
+    };
+  
+    const openModal = (post = null) => {
+      setPostEditando(post);
+      setModalVisible(true);
+    };
+  
+    const closeModal = () => {
+      setPostEditando(null);
+      setModalVisible(false);
+    };
+  
+    
+    const removerPost = (postParaRemover) => {
+      setPosts(posts.filter((post) => post !== postParaRemover));
+    };
 
-  const handleFiltroPress = (filtro) => {
-    setFiltroAtivo(filtro);
-    console.log("O filtro é: " + filtro);
+    const fetchPosts = async () => {
+      try {
+          const { data, error } = await supabase
+              .from('post') // Nome da tabela
+              .select('*'); // Busca todas as colunas
+
+          if (error) {
+              console.error('Erro ao buscar dados:', error.message);
+              return;
+          }
+
+          setPosts(data); // Atualiza o estado "posts" com os dados retornados
+      } catch (err) {
+          console.error('Erro inesperado:', err);
+      }
   };
 
-  const openModal = () => {
-    setModalVisible(true);
-  };
-
-  const closeModal = () => {
-    setModalVisible(false);
-  };
-
-  const adicionarPost = (novoPost) => {
-    console.log("Post recebido do modal:", novoPost); // Verifica o post recebido do modal
-    setPosts([...posts, novoPost]);
-    setModalVisible(false);
-  };
-
-  return (
-    <View style={{ flex: 1, alignItems: "center", backgroundColor: "#fff" }}>
-      <View style={home.header}>
-        <Image
-          style={home.logo}
-          source={require("../assets/img/logo.png")}
-        ></Image>
-        <View style={home.linha1}></View>
-        <View style={home.filtroBox}>
-          <Pressable
-            style={filtroAtivo === "Geral" ? home.filtroAtivo : home.filtro}
-            onPress={() => handleFiltroPress("Geral")}
-          >
-            <Text style={home.textoFiltro}>Geral</Text>
-          </Pressable>
-
-          <Pressable
-            style={filtroAtivo === "Enquetes" ? home.filtroAtivo : home.filtro}
-            onPress={() => handleFiltroPress("Enquetes")}
-          >
-            <Text style={home.textoFiltro}>Enquetes</Text>
-          </Pressable>
-
-          <Pressable
-            style={filtroAtivo === "Cardápio" ? home.filtroAtivo : home.filtro}
-            onPress={() => handleFiltroPress("Cardápio")}
-          >
-            <Text style={home.textoFiltro}>Cardápio</Text>
-          </Pressable>
-
-          <Pressable
-            style={filtroAtivo === "Sugestões" ? home.filtroAtivo : home.filtro}
-            onPress={() => handleFiltroPress("Sugestões")}
-          >
-            <Text style={home.textoFiltro}>Sugestões</Text>
-          </Pressable>
+  // useEffect para buscar os dados ao montar o componente
+  useEffect(() => {
+      fetchPosts(); // Chama a função para buscar os dados
+  }, []);
+  
+    return (
+      <View style={{ flex: 1, alignItems: "center", backgroundColor: "#fff" }}>
+        <View style={home.header}>
+          <Image
+            style={home.logo}
+            source={require("../assets/img/logo.png")}
+          ></Image>
+          <View style={home.linha1}></View>
+          <View style={home.filtroBox}>
+            <Pressable
+              style={filtroAtivo === "Geral" ? home.filtroAtivo : home.filtro}
+              onPress={() => handleFiltroPress("Geral")}
+            >
+              <Text style={home.textoFiltro}>Geral</Text>
+            </Pressable>
+  
+            <Pressable
+              style={filtroAtivo === "Enquetes" ? home.filtroAtivo : home.filtro}
+              onPress={() => handleFiltroPress("Enquetes")}
+            >
+              <Text style={home.textoFiltro}>Enquetes</Text>
+            </Pressable>
+  
+            <Pressable
+              style={filtroAtivo === "Cardápio" ? home.filtroAtivo : home.filtro}
+              onPress={() => handleFiltroPress("Cardápio")}
+            >
+              <Text style={home.textoFiltro}>Cardápio</Text>
+            </Pressable>
+  
+            <Pressable
+              style={filtroAtivo === "Sugestões" ? home.filtroAtivo : home.filtro}
+              onPress={() => handleFiltroPress("Sugestões")}
+            >
+              <Text style={home.textoFiltro}>Sugestões</Text>
+            </Pressable>
+          </View>
+          <View style={home.linha2}></View>
         </View>
-        <View style={home.linha2}></View>
+  
+        <View style={home.main}>
+          <FlatList
+            data={posts}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <>
+                <Post
+                  texto={item.texto}
+                  imagens={item.imagens}
+                  imagem={item.imagem}
+                  tipo={item.tipo}
+                  opcoes={item.opcoes}
+                />
+                <View style={{ flexDirection: "row", justifyContent: "center" }}>
+                  <TouchableOpacity onPress={() => removerPost(item)}>
+                    <Ionicons name="trash-outline" size={30} color={'#ff0000'}/>
+                  </TouchableOpacity>
+                </View>
+                <View
+                  style={{
+                    width: "95%",
+                    height: 2,
+                    backgroundColor: "#ff0000",
+                    opacity: 0.18,
+                    alignSelf: "center",
+                    marginVertical: 25,
+                  }}
+                />
+              </>
+            )}
+            style={{ width: "100%" }}
+          />
+        </View>
+  
+        <Pressable onPress={() => openModal()} style={home.botaoAdicionar}>
+          <Ionicons name={"add-outline"} size={30} color={"#fff"} />
+        </Pressable>
+  
+        {isModalVisible && (
+          <Adicionar
+            visible={isModalVisible}
+            onClose={closeModal}
+            postEditando={postEditando} // Passa o post em edição
+          />
+        )}
       </View>
-
-      <View style={home.main}>
-        <FlatList
-          data={posts}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <>
-              <Post
-                texto={item.texto}
-                imagens={item.imagens}
-                imagem={item.imagem}
-                tipo={item.tipo}
-                opcoes={item.opcoes}
-              />
-              <View
-                style={{
-                  width: "95%",
-                  height: 2,
-                  backgroundColor: "#ff0000",
-                  opacity: 0.18,
-                  alignSelf: "center", // Centraliza a linha divisória
-                  marginVertical: 25, // Espaçamento vertical entre posts
-                }}
-              />
-            </>
-          )}
-          style={{ width: "100%" }}
-        />
-      </View>
-
-      <Pressable onPress={openModal} style={home.botaoAdicionar}>
-        <Ionicons name={"add-outline"} size={30} color={"#fff"} />
-      </Pressable>
-
-      {isModalVisible && (
-        <Adicionar
-          visible={isModalVisible}
-          onClose={closeModal}
-          onSubmit={adicionarPost}
-        />
-      )}
-    </View>
-  );
-}
+    );
+  }
 
 function SettingsScreen() {
   const [isToggled, setIsToggled] = useState(false);
@@ -247,17 +277,17 @@ const dadosDashboard = {
 const Dashboard = () => {
   const [windowWidth, setWindowWidth] = useState(Dimensions.get('window').width);
 
-  useLayoutEffect(() => {
-    const onResize = () => {
-      setWindowWidth(Dimensions.get('window').width);
-    };
+  // useLayoutEffect(() => {
+  //   const onResize = () => {
+  //     setWindowWidth(Dimensions.get('window').width);
+  //   };
 
-    Dimensions.addEventListener('change', onResize);
+  //   Dimensions.addEventListener('change', onResize);
 
-    return () => {
-      Dimensions.removeEventListener('change', onResize);
-    };
-  }, []);
+  //   return () => {
+  //     Dimensions.removeEventListener('change', onResize);
+  //   };
+  // }, []);
 
   return (
     <ScrollView style={dash.container}>
@@ -715,6 +745,14 @@ const home = StyleSheet.create({
     width: "100%",
     flex: 1,
     alignItems: "center",
+  },
+  botaoEditar: {
+    color: "blue",
+    margin: 10,
+  },
+  botaoExcluir: {
+    color: "red",
+    margin: 10,
   },
   linha1: {
     marginTop: 6,
