@@ -15,7 +15,7 @@ import {
     Platform
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { supabase } from './supabase'; 
+import { supabase } from '../supabase'
 
 
 export default function Bem_Vindo() {
